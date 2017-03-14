@@ -1,0 +1,70 @@
+---
+    - hosts: control
+      remote_user: mels
+      become: yes
+
+      vars_files:
+      - group_vars/webservers
+      
+      tasks:
+
+        - name: Install Apache
+          yum: pkg={{item}} state=latest
+          with_items:
+           - httpd
+           - httpd-devel
+           - httpd-tools
+           - mod_ssl
+
+        - name: create dir if they dont exist
+          file:
+            path: /etc/ssl/certs/private
+            state: directory
+            
+
+        - name: generate self-signed SSL cert
+          command:  openssl req -subj "/C=US/ST=Pennsylvania/L=Philadelphia/O=IT/CN=${my_domain}" -new -newkey rsa:2048 -days 365 -nodes -x509 -keyout certs/server.key -out certs/server.crt
+          
+        - name: copy cert to webserver
+          copy:
+            src: '{{ src_path_crt }}'
+            dest: '{{ dst_path_crt }}'
+            owner: root
+            group: root
+            mode: '0644'
+        - name: copy private key to webserver
+          copy: 
+            src:  '{{ src_path_key }}'
+            dest: '{{ dst_path_key }}'
+            owner: root
+            group: root
+            mode: '0600'
+
+        - template: src=virtualhttpd.j2 dest=/etc/httpd/conf.d/virtualhttpd.conf
+        - template: src=ssl.j2 dest=/etc/httpd/conf.d/ssl.conf
+        
+        - name: copy index.html
+          copy: src= '{{ path_webdata }}'/index.html dest=/var/www/html
+
+        - file: 
+           path: /var/www/html/index.html 
+           owner: apache 
+           group: apache 
+           mode: 0644
+
+        - service: name=httpd enabled=yes
+
+          notify: 
+          - Start apache
+
+
+        - name: deploy iptables rules
+          template: src=iptables dest=/etc/sysconfig/iptables
+          notify: Restart iptables
+
+        - name: check if port 443 is open
+          shell: nc -zv {{web_server_ip}} 443
+          register: port_result
+          
+        - debug:
+            var: port_result

@@ -1,0 +1,19 @@
+---
+## Ports defined here
+ssh_port: 22
+http_port: 80
+https_port: 443
+
+###
+### Change to your domain
+#my_domain: "mydomain.com"
+my_domain: "118.102.132.207"
+#
+## Enter the server IP here
+web_server_ip: "118.102.132.207"
+src_path_crt: "certs/server.crt"
+src_path_key: "certs/server.key"
+dst_path_crt: "/etc/ssl/certs/server.crt"
+dst_path_key: "/etc/ssl/certs/private/server.key"
+
+path_webdata: "myrepo/webdata"
